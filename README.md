@@ -79,5 +79,6 @@ See `.env.example` for all required variables:
 
 ## Key Links
 
+- [Technical Design Document (TDD)](https://www.notion.so/Workout-Buddy-iMessage-AI-Agent-330c1ff4dfe281f8b01af24edebc2724)
 - [Linq API Docs](https://apidocs.linqapp.com/)
 - [Linq Sandbox Signup](https://dashboard.linqapp.com/sandbox-signup)
