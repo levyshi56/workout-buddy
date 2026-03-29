@@ -54,6 +54,7 @@ OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 LINQ_API_KEY = config("LINQ_API_KEY", default="")
 LINQ_WEBHOOK_SECRET = config("LINQ_WEBHOOK_SECRET", default="")
 LINQ_BASE_URL = config("LINQ_BASE_URL", default="https://api.linqapp.com")
+LINQ_FROM_NUMBER = config("LINQ_FROM_NUMBER", default="")
 
 STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

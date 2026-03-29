@@ -59,6 +59,7 @@ class UserProfile(Document):
 
     id = UUIDField(primary_key=True, default=uuid.uuid4, binary=False)
     phone_number = StringField(required=True, unique=True)
+    linq_chat_id = StringField(default="")
     name = StringField(default="")
     created_at = DateTimeField(default=datetime.utcnow)
 

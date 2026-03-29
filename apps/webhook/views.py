@@ -44,6 +44,7 @@ def linq_webhook(request):
     data = body.get("data", {})
     sender = data.get("sender_handle", {})
     phone_number = sender.get("handle", "")
+    chat_id = data.get("chat", {}).get("id", "")
     parts = data.get("parts", [])
     message_text = next((p.get("value", "") for p in parts if p.get("type") == "text"), "")
 
@@ -57,6 +58,17 @@ def linq_webhook(request):
         return JsonResponse({"status": "ok", "note": "no text body"})
 
     logger.info("Inbound message from %s: %r", phone_number, message_text[:80])
+
+    # Cache the Linq chat_id on the user for outbound replies
+    if chat_id:
+        try:
+            from apps.users.service import get_or_create_user
+            user = get_or_create_user(phone_number)
+            if user.linq_chat_id != chat_id:
+                user.linq_chat_id = chat_id
+                user.save()
+        except Exception as exc:
+            logger.warning("Failed to save linq_chat_id for %s: %s", phone_number, exc)
 
     # Enqueue for debounced processing — return 200 immediately
     try:
