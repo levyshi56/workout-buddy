@@ -31,7 +31,7 @@ WSGI_APPLICATION = "workout_buddy.wsgi.application"
 MONGODB_URI = config("MONGODB_URI", default="mongodb://localhost:27017/workout_buddy")
 
 import mongoengine
-mongoengine.connect(host=MONGODB_URI)
+mongoengine.connect(db="workout_buddy", host=MONGODB_URI)
 
 # Redis / Celery
 REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/0")
