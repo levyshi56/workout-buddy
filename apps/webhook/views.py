@@ -36,9 +36,16 @@ def linq_webhook(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "invalid JSON"}, status=400)
 
-    # Linq payload shape (adjust to actual Linq webhook schema)
-    phone_number = body.get("from") or body.get("sender") or body.get("phone_number", "")
-    message_text = body.get("body") or body.get("text") or body.get("message", "")
+    # Only process inbound messages
+    if body.get("event_type") != "message.received":
+        return JsonResponse({"status": "ok", "note": "ignored event"})
+
+    # Linq v3 payload shape
+    data = body.get("data", {})
+    sender = data.get("sender_handle", {})
+    phone_number = sender.get("handle", "")
+    parts = data.get("parts", [])
+    message_text = next((p.get("value", "") for p in parts if p.get("type") == "text"), "")
 
     if not phone_number:
         logger.warning("Webhook received with no phone_number: %s", body)
@@ -72,12 +79,29 @@ def health_check(request):
 def _verify_signature(request) -> bool:
     """
     Verify the HMAC-SHA256 signature Linq includes in the X-Linq-Signature header.
-    Adjust header name / signing scheme to match actual Linq docs.
     """
+    import base64
+
+    # Log all headers so we can see exactly what Linq sends
+    sig_headers = {k: v for k, v in request.META.items() if "LINQ" in k or "SIGNATURE" in k or "SECRET" in k}
+    logger.info("Linq signature headers: %s", sig_headers)
+
     signature_header = request.META.get("HTTP_X_LINQ_SIGNATURE", "")
     if not signature_header:
+        logger.warning("No X-Linq-Signature header found")
         return False
 
     secret = settings.LINQ_WEBHOOK_SECRET.encode()
-    expected = hmac.new(secret, request.body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature_header)
+
+    # Try base64-encoded HMAC-SHA256 (Linq uses this format)
+    expected_b64 = base64.b64encode(hmac.new(secret, request.body, hashlib.sha256).digest()).decode()
+    if hmac.compare_digest(expected_b64, signature_header):
+        return True
+
+    # Fallback: hex digest
+    expected_hex = hmac.new(secret, request.body, hashlib.sha256).hexdigest()
+    if hmac.compare_digest(expected_hex, signature_header):
+        return True
+
+    logger.warning("Signature mismatch. Header: %r, Expected b64: %r, Expected hex: %r", signature_header, expected_b64, expected_hex)
+    return False
