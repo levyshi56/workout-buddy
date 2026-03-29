@@ -69,7 +69,7 @@ class ConversationEngine:
         lock_key = f"conv_lock:{phone_number}"
         lock = self._get_redis_lock(lock_key)
 
-        if not lock.acquire(blocking=True, timeout=_LOCK_TIMEOUT):
+        if not lock.acquire(blocking=True, blocking_timeout=_LOCK_TIMEOUT):
             logger.warning("Could not acquire lock for %s, dropping message", phone_number)
             return
 
