@@ -4,7 +4,7 @@ mongoengine==0.28.2
 pymongo>=3.12,<4.0
 celery==5.3.6
 redis==5.0.1
-openai==1.51.0
+openai>=1.60.0
 requests==2.31.0
 python-decouple==3.8
 gunicorn==21.2.0
