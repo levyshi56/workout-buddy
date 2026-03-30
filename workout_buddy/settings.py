@@ -31,7 +31,7 @@ WSGI_APPLICATION = "workout_buddy.wsgi.application"
 MONGODB_URI = config("MONGODB_URI", default="mongodb://localhost:27017/workout_buddy")
 
 import mongoengine
-mongoengine.connect(host=MONGODB_URI)
+mongoengine.connect(host=MONGODB_URI, connect=False)
 
 # Redis / Celery
 REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/0")
@@ -42,6 +42,7 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # REST Framework
 REST_FRAMEWORK = {

@@ -27,7 +27,7 @@ class LinqClient(BaseMessagingClient):
             "Content-Type": "application/json",
         }
         payload = {
-            "to": phone_number,
+            "phone_number": phone_number,
             "body": text,
         }
 
