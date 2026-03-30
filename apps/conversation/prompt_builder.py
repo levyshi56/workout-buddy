@@ -17,6 +17,10 @@ def build_context(user: UserProfile) -> dict:
         "memory": user.memory_summary(),
         "recent_sessions": user.recent_sessions_summary(n=3),
         "active_session": None,
+        "conversation_history": [
+            {"role": msg.role, "content": msg.content}
+            for msg in user.conversation_history
+        ],
     }
 
     if user.active_session:

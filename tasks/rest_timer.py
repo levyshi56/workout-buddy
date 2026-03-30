@@ -43,8 +43,12 @@ def send_rest_over(self, phone_number: str, enqueued_at_iso: str):
         )
         return
 
+    rest_message = "Rest's up. Ready for the next set?"
+    user.add_message("assistant", rest_message)
+    user.save()
+
     client = get_client()
-    client.send_message(phone_number, "Rest's up. Ready for the next set?")
+    client.send_message(phone_number, rest_message)
 
 
 @shared_task(bind=True, max_retries=0)
