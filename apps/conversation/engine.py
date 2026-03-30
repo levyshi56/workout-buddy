@@ -91,6 +91,11 @@ class ConversationEngine:
         user = get_or_create_user(phone_number)
         context = build_context(user)
 
+        # Save inbound user message after building context so it doesn't
+        # appear in both history and as the explicit current message
+        user.add_message("user", message)
+        user.save()
+
         provider = get_provider()
         response = provider.get_coach_response(context, message)
 
@@ -103,6 +108,11 @@ class ConversationEngine:
         # Send the coach's reply to the user
         client = get_client()
         client.send_message(phone_number, response["message"])
+
+        # Save outbound bot reply to history
+        user.reload()  # dispatch may have modified the document
+        user.add_message("assistant", response["message"])
+        user.save()
 
     def _maybe_save_workout_plan(self, user, response) -> None:
         """

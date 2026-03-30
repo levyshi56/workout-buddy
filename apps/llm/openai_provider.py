@@ -58,8 +58,18 @@ class OpenAIProvider(BaseLLMProvider):
         user_context_block = self._build_context_block(context)
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"{user_context_block}\n\nUser message: {message}"},
+            {"role": "user", "content": user_context_block},
         ]
+
+        # Inject conversation history as proper role-based messages
+        for hist_msg in context.get("conversation_history", []):
+            messages.append({
+                "role": hist_msg["role"],
+                "content": hist_msg["content"],
+            })
+
+        # Current user message last
+        messages.append({"role": "user", "content": f"User message: {message}"})
 
         try:
             resp = self.client.chat.completions.create(
