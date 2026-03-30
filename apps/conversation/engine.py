@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 _DEBOUNCE_SECONDS = 2
 _LOCK_TIMEOUT = 30  # seconds
+_RESET_KEYWORDS = {"nevins"}
 
 
 class ConversationEngine:
@@ -36,6 +37,10 @@ class ConversationEngine:
         process_debounced_message after 2s. Revokes the previous
         debounce task if one is pending.
         """
+        if message.strip().lower() in _RESET_KEYWORDS:
+            self._handle_reset(phone_number)
+            return
+
         from apps.users.service import get_or_create_user, update_last_message_time
         from tasks.rest_timer import process_debounced_message
 
@@ -113,6 +118,20 @@ class ConversationEngine:
         user.reload()  # dispatch may have modified the document
         user.add_message("assistant", response["message"])
         user.save()
+
+    def _handle_reset(self, phone_number: str) -> None:
+        """Delete the user's profile entirely so the next message starts fresh."""
+        from apps.users.service import get_or_create_user
+        from apps.messaging.linq_client import get_client
+
+        user = get_or_create_user(phone_number)
+        self._revoke_rest_timer(user)
+        self._revoke_debounce_task(user)
+        user.delete()
+
+        client = get_client()
+        client.send_message(phone_number, "All clear! I've forgotten everything. Text me when you're ready to start fresh.")
+        logger.info("full reset: deleted profile for %s", phone_number)
 
     def _maybe_save_workout_plan(self, user, response) -> None:
         """
