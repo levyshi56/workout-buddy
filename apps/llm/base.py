@@ -1,15 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import TypedDict, Any
-
-
-class CoachAction(TypedDict):
-    type: str   # start_rest | advance_set | log_weight | end_session | update_memory | none
-    params: dict[str, Any]
-
-
-class CoachResponse(TypedDict):
-    message: str
-    action: CoachAction
 
 
 class BaseLLMProvider(ABC):
@@ -19,11 +8,10 @@ class BaseLLMProvider(ABC):
     """
 
     @abstractmethod
-    def get_coach_response(self, context: dict, message: str) -> CoachResponse:
+    def run_coach_loop(self, user, messages: list[dict], tools: list[dict]) -> str:
         """
-        Given a context dict (user memory, session state, history)
-        and the user's latest message, return a CoachResponse with:
-          - message: text to send back to the user
-          - action: structured action for the engine to dispatch
+        Run the tool-use loop until the model produces a final text response.
+        Executes tool calls against the user object as they come in.
+        Returns the final text message string to send to the user.
         """
         ...
