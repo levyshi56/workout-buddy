@@ -88,35 +88,32 @@ class ConversationEngine:
 
     def _run(self, phone_number: str, message: str) -> None:
         from apps.users.service import get_or_create_user
-        from apps.conversation.prompt_builder import build_context
-        from apps.conversation.action_handlers import dispatch
-        from apps.llm.openai_provider import get_provider
+        from apps.conversation.skills import TOOL_DEFINITIONS
+        from apps.llm.openai_provider import get_provider, SYSTEM_PROMPT
         from apps.messaging.linq_client import get_client
 
         user = get_or_create_user(phone_number)
-        context = build_context(user)
 
-        # Save inbound user message after building context so it doesn't
-        # appear in both history and as the explicit current message
+        # Save inbound user message
         user.add_message("user", message)
         user.save()
 
+        # Build messages: system prompt + conversation history
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        for msg in user.conversation_history:
+            messages.append({"role": msg.role, "content": msg.content})
+
+        # Run the tool-use loop
         provider = get_provider()
-        response = provider.get_coach_response(context, message)
+        reply_text = provider.run_coach_loop(user, messages, TOOL_DEFINITIONS)
 
-        # Dispatch the structured action (updates MongoDB state)
-        dispatch(user, response["action"])
-
-        # Save the LLM-generated workout plan if this is a new session start
-        self._maybe_save_workout_plan(user, response)
-
-        # Send the coach's reply to the user
+        # Send the coach's reply
         client = get_client()
-        client.send_message(phone_number, response["message"])
+        client.send_message(phone_number, reply_text)
 
         # Save outbound bot reply to history
-        user.reload()  # dispatch may have modified the document
-        user.add_message("assistant", response["message"])
+        user.reload()
+        user.add_message("assistant", reply_text)
         user.save()
 
     def _handle_reset(self, phone_number: str) -> None:
@@ -132,14 +129,6 @@ class ConversationEngine:
         client = get_client()
         client.send_message(phone_number, "All clear! I've forgotten everything. Text me when you're ready to start fresh.")
         logger.info("full reset: deleted profile for %s", phone_number)
-
-    def _maybe_save_workout_plan(self, user, response) -> None:
-        """
-        If the action is 'advance_set' or 'start_rest' and there's no workout plan
-        yet, the LLM may have included one. This is a best-effort extraction.
-        The LLM can also return a "start_session" action in the future.
-        """
-        pass  # Extended in future iterations
 
     def _revoke_rest_timer(self, user) -> None:
         if user.active_session and user.active_session.rest_timer_task_id:
