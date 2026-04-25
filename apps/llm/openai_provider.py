@@ -63,10 +63,6 @@ class OpenAIProvider(BaseLLMProvider):
 
             choice = resp.choices[0]
 
-            # Model produced a final text reply — done
-            if choice.finish_reason == "stop":
-                return choice.message.content or _FALLBACK_MESSAGE
-
             # Model wants to call tools
             if choice.message.tool_calls:
                 working_messages.append(choice.message)
@@ -77,8 +73,11 @@ class OpenAIProvider(BaseLLMProvider):
                     except json.JSONDecodeError:
                         arguments = {}
 
-                    result_str = execute_skill(user, tool_call.function.name, arguments)
-                    user.reload()
+                    try:
+                        result_str = execute_skill(user, tool_call.function.name, arguments)
+                    except Exception as exc:
+                        logger.error("Skill execution failed (%s): %s", tool_call.function.name, exc)
+                        result_str = json.dumps({"error": str(exc)})
 
                     working_messages.append({
                         "role": "tool",
@@ -86,12 +85,18 @@ class OpenAIProvider(BaseLLMProvider):
                         "content": result_str,
                     })
 
+                user.reload()
                 continue
+
+            # Model produced a final text reply — done
+            if choice.finish_reason == "stop":
+                return choice.message.content or _FALLBACK_MESSAGE
 
             # Unexpected finish_reason — bail
             logger.warning("Unexpected finish_reason: %s", choice.finish_reason)
             break
 
+        logger.warning("Tool-use loop exhausted MAX_TOOL_ROUNDS (%d)", self.MAX_TOOL_ROUNDS)
         return _FALLBACK_MESSAGE
 
 

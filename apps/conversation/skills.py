@@ -304,6 +304,10 @@ def skill_log_set(user, exercise, reps, weight) -> dict:
         elif session.current_exercise_index + 1 < len(plan):
             session.current_exercise_index += 1
             session.current_set_index = 0
+        else:
+            # Last set of last exercise — advance past end to signal completion
+            session.current_exercise_index = len(plan)
+            session.current_set_index = 0
 
     user.save()
     set_number = len([s for s in user.active_session.completed_sets if s.get("exercise") == exercise])
@@ -314,7 +318,7 @@ def skill_log_set(user, exercise, reps, weight) -> dict:
 def skill_start_rest(user, seconds=90) -> dict:
     from tasks.rest_timer import send_rest_over
 
-    seconds = int(seconds)
+    seconds = max(int(seconds), 1)
     enqueued_at = datetime.now(timezone.utc).isoformat()
 
     task = send_rest_over.apply_async(
@@ -361,6 +365,8 @@ def skill_end_session(user, duration_minutes, summary="") -> dict:
 
     exercises = []
     prs_updated = []
+    if not user.prs:
+        user.prs = {}
     for name, sets in exercise_map.items():
         set_records = [SetRecord(reps=s.get("reps", 0), weight=s.get("weight", 0)) for s in sets]
         max_weight = max((s.get("weight", 0) for s in sets), default=0)

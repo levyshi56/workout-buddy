@@ -11,11 +11,9 @@ Message flow per inbound text:
 
 The debounced task calls _run() which does:
 1. Acquire per-user Redis lock (prevent concurrent processing, TDD constraint #4)
-2. Build LLM context
-3. Call LLM with timeout guard (TDD constraint #5)
-4. Dispatch structured action
-5. Send reply via Linq
-6. Release lock
+2. Run the LLM tool-use loop (skills called on demand, TDD constraint #5)
+3. Send reply via Linq
+4. Release lock
 """
 import logging
 from datetime import datetime, timezone
